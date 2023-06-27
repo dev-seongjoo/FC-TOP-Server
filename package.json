@@ -18,6 +18,8 @@
     "sequelize": "^6.32.1"
   },
   "devDependencies": {
-    "nodemon": "^2.0.22"
+    "crypto-js": "^4.1.1",
+    "nodemon": "^2.0.22",
+    "request": "^2.88.2"
   }
 }
