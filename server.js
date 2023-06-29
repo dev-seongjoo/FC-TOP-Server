@@ -15,7 +15,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-async function initialize() {
+const initialize = async () => {
   try {
     await sequelize.authenticate();
     console.log("MySQL 연결 성공!");
@@ -24,7 +24,8 @@ async function initialize() {
   } catch (error) {
     console.error("MySQL 연결 실패:", error);
   }
-}
+};
+
 const hashAlgo = async (password) => {
   try {
     const saltRounds = 10; // 솔트(rounds)의 수를 정의합니다. 보통 10 이상을 권장합니다.
@@ -36,13 +37,47 @@ const hashAlgo = async (password) => {
   }
 };
 
+async function comparePasswords(inputPassword, hashedPassword) {
+  try {
+    return await bcrypt.compare(inputPassword, hashedPassword);
+  } catch (error) {
+    console.error("비밀번호 비교 오류:", error);
+    throw error;
+  }
+}
+
+app.post("/checkDuplicatedPhone", async (req, res) => {
+  const phone = req.body.phone;
+
+  try {
+    const result = await User.findOne({
+      where: {
+        PHONE_NO: phone,
+      },
+    });
+    if (result) {
+      res.send(true);
+    } else {
+      res.send(false);
+    }
+  } catch (error) {
+    res.status(500).send("사용자 검색에 실패했습니다.");
+  }
+});
+
+app.post("/sms", (req, res) => {
+  console.log(req.body);
+  const phone = req.body.phone;
+  const code = req.body.authCode;
+  send_message(phone, code);
+  res.send("발송 완료");
+});
+
 app.post("/signUp", async (req, res) => {
   try {
     const birthday = req.body.year.slice(-2) + req.body.month + req.body.day;
     const inputPassword = req.body.password;
     const hashPassword = await hashAlgo(inputPassword);
-
-    console.log(hashPassword);
 
     const newUser = await User.create({
       KOR_LAST_NM: req.body.korLastName,
@@ -68,36 +103,33 @@ app.post("/signUp", async (req, res) => {
   }
 });
 
-app.post("/sms", (req, res) => {
+app.post("/login", async (req, res) => {
   console.log(req.body);
-  const phone = req.body.phone;
-  const code = req.body.authCode;
-  send_message(phone, code);
-  res.send("발송 완료");
-});
-
-app.post("/checkDuplicatedPhone", async (req, res) => {
-  const phone = req.body.phone;
-
   try {
-    const result = await User.findOne({
-      where: {
-        PHONE_NO: phone,
-      },
-    });
-    if (result) {
-      res.send(true);
-    } else {
-      res.send(false);
+    const phone = req.body.phone;
+    const password = req.body.password;
+
+    const user = await User.findOne({ where: { PHONE_NO: phone } });
+
+    if (!user) {
+      return res.status(401).send("핸드폰 또는 비밀번호가 옳지 않습니다.");
     }
+
+    const isMatch = await comparePasswords(password, user.PASSWORD);
+
+    if (!isMatch) {
+      return res.status(401).send("핸드폰 또는 비밀번호가 옳지 않습니다.");
+    }
+
+    res.send("로그인 성공");
   } catch (error) {
-    res.status(500).send("사용자 검색에 실패했습니다.");
+    console.error("로그인 에러:", error);
+    res.status(500).send("로그인에 실패했습니다.");
   }
 });
-
-initialize();
 
 // start the Express server
 app.listen(PORT, () => {
   console.log(`Server is running on port: ${PORT}`);
 });
+initialize();
