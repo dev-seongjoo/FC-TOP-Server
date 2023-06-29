@@ -2,54 +2,62 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../config/sequelize");
 
 const User = sequelize.define("User", {
-  id: {
+  ID: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,
     autoIncrement: true,
   },
-  korLastName: {
+  KOR_LAST_NM: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  korFirstName: {
+  KOR_FIRST_NM: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  engLastName: {
+  ENG_LAST_NM: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  engFirstName: {
+  ENG_FIRST_NM: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  password: {
+  PASSWORD: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  cellPhone: {
+  PHONE_NO: {
     type: DataTypes.STRING,
     unique: true,
     allowNull: false,
   },
-  zipCode: {
+  POSTCODE_NO: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
-  address: {
+  ADDRESS: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  birth: {
+  BIRTHDAY_YMD: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
-  position: {
+  POSITION_FIRST: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  foot: {
+  POSITION_SECOND: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  POSITION_THIRD: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  FOOT: {
     type: DataTypes.STRING,
     allowNull: false,
   },
