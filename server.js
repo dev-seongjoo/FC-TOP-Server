@@ -1,15 +1,21 @@
 const express = require("express");
+const app = express();
+
 const cors = require("cors");
+
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const { saveRefreshToken, getRefreshToken } = require("./utils/refreshToken");
+
 require("dotenv").config();
 
 const sequelize = require("./config/sequelize");
-const User = require("./models/user");
-
-const send_message = require("./controllers/send_message");
+const Users = require("./models/users");
 
 const PORT = process.env.PORT || 5050;
-const app = express();
+
+const send_message = require("./controllers/send_message");
+const hashAlgo = require("./utils/hashAlgo");
 
 app.use(cors());
 app.use(express.json());
@@ -26,42 +32,39 @@ const initialize = async () => {
   }
 };
 
-const hashAlgo = async (password) => {
+app.post("/checkIdDuplication", async (req, res) => {
+  const id = req.body.id;
   try {
-    const saltRounds = 10; // 솔트(rounds)의 수를 정의합니다. 보통 10 이상을 권장합니다.
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-    return hashedPassword;
+    const result = await Users.findOne({
+      where: {
+        USER_ID: id,
+      },
+    });
+    if (result) {
+      return res.send(true);
+    } else {
+      return res.send(false);
+    }
   } catch (error) {
-    console.error("비밀번호 암호화 오류:", error);
-    throw error;
+    return res.status(500).send("사용자 검색에 실패했습니다.");
   }
-};
+});
 
-async function comparePasswords(inputPassword, hashedPassword) {
-  try {
-    return await bcrypt.compare(inputPassword, hashedPassword);
-  } catch (error) {
-    console.error("비밀번호 비교 오류:", error);
-    throw error;
-  }
-}
-
-app.post("/checkDuplicatedPhone", async (req, res) => {
+app.post("/checkPhoneDuplication", async (req, res) => {
   const phone = req.body.phone;
-
   try {
-    const result = await User.findOne({
+    const result = await Users.findOne({
       where: {
         PHONE_NO: phone,
       },
     });
     if (result) {
-      res.send(true);
+      return res.send(true);
     } else {
-      res.send(false);
+      return res.send(false);
     }
   } catch (error) {
-    res.status(500).send("사용자 검색에 실패했습니다.");
+    return res.status(500).send("사용자 검색에 실패했습니다.");
   }
 });
 
@@ -70,21 +73,23 @@ app.post("/sms", (req, res) => {
   const phone = req.body.phone;
   const code = req.body.authCode;
   send_message(phone, code);
-  res.send("발송 완료");
+  return res.send("발송 완료");
 });
 
+// 회원가입 api
 app.post("/signUp", async (req, res) => {
   try {
     const birthday = req.body.year.slice(-2) + req.body.month + req.body.day;
     const inputPassword = req.body.password;
     const hashPassword = await hashAlgo(inputPassword);
 
-    const newUser = await User.create({
+    const newUser = await Users.create({
+      USER_ID: req.body.id,
+      USER_PASSWORD: hashPassword,
       KOR_LAST_NM: req.body.korLastName,
       KOR_FIRST_NM: req.body.korFirstName,
       ENG_LAST_NM: req.body.engLastName,
       ENG_FIRST_NM: req.body.engFirstName,
-      PASSWORD: hashPassword,
       PHONE_NO: req.body.phone,
       POSTCODE_NO: req.body.postCode,
       ADDRESS: req.body.address,
@@ -95,40 +100,81 @@ app.post("/signUp", async (req, res) => {
       FOOT: req.body.preferFoot,
     });
 
-    console.log("User 저장 완료:", newUser);
-    res.send("전송 완료");
+    console.log(newUser);
+
+    return res.send("전송 완료");
   } catch (error) {
     console.error("에러 발생", error);
-    res.status(500).send("사용자 저장에 실패했습니다");
+    return res.status(500).send("사용자 저장에 실패했습니다");
   }
 });
 
+// 로그인 api
 app.post("/login", async (req, res) => {
-  console.log(req.body);
   try {
-    const phone = req.body.phone;
-    const password = req.body.password;
-
-    const user = await User.findOne({ where: { PHONE_NO: phone } });
+    const { id, password } = req.body;
+    const user = await Users.findOne({ where: { USER_ID: id } });
 
     if (!user) {
-      return res.status(401).send("핸드폰 또는 비밀번호가 옳지 않습니다.");
+      res.status(400).send("아이디 혹은 비밀번호가 잘못되었습니다.");
+      return;
     }
 
-    const isMatch = await comparePasswords(password, user.PASSWORD);
+    const result = await bcrypt.compare(password, user.USER_PASSWORD);
 
-    if (!isMatch) {
-      return res.status(401).send("핸드폰 또는 비밀번호가 옳지 않습니다.");
+    if (!result) {
+      return res.status(400).send("아이디 혹은 비밀번호가 잘못되었습니다.");
     }
-
-    res.send("로그인 성공");
-  } catch (error) {
-    console.error("로그인 에러:", error);
-    res.status(500).send("로그인에 실패했습니다.");
+    const accessToken = jwt.sign(
+      { id: user.USER_ID },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "1m" }
+    );
+    const refreshToken = jwt.sign(
+      { id: user.USER_ID },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "7d" } // refreshToken의 만료시간을 7일로 설정
+    );
+    await saveRefreshToken(user.USER_ID, refreshToken); // refreshToken을 DB에 저장
+    return res.status(200).json({ accessToken, refreshToken });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send("Internal server error");
   }
 });
 
-// start the Express server
+//
+app.post("/token", async (req, res) => {
+  try {
+    const rToken = req.body.token;
+
+    if (rToken == null) return res.sendStatus(401);
+
+    const userIdFromToken = jwt.decode(rToken).id;
+    const refreshTokenFromDb = await getRefreshToken(userIdFromToken);
+
+    if (rToken !== refreshTokenFromDb) return res.sendStatus(403);
+
+    jwt.verify(rToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+      if (err) return res.sendStatus(401);
+
+      const accessToken = jwt.sign(
+        { id: user.id },
+        process.env.ACCESS_TOKEN_SECRET,
+        {
+          expiresIn: "1m",
+        }
+      );
+
+      return res.json({ accessToken });
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send("Internal server error");
+  }
+});
+
+// 서버 시작
 app.listen(PORT, () => {
   console.log(`Server is running on port: ${PORT}`);
 });
