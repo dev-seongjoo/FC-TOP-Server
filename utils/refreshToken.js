@@ -1,14 +1,17 @@
-const Users = require("../models/users");
+const Players = require("../models/players");
 
 // refreshToken을 데이터베이스에 저장하는 함수
 async function saveRefreshToken(userId, refreshToken) {
-  await Users.update({ refreshToken }, { where: { USER_ID: userId } });
+  await Players.update(
+    { REFRESH_TOKEN: refreshToken },
+    { where: { LOGIN_ID: userId } }
+  );
 }
 
 // 데이터베이스에서 refreshToken을 조회하는 함수
 async function getRefreshToken(userId) {
-  const user = await Users.findOne({ where: { USER_ID: userId } });
-  return user.refreshToken;
+  const player = await Players.findOne({ where: { LOGIN_ID: userId } });
+  return player.refreshToken;
 }
 
 module.exports = {

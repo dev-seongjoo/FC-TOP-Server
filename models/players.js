@@ -1,43 +1,35 @@
-const { DataTypes } = require("sequelize");
 const sequelize = require("../config/sequelize");
+const { DataTypes } = require("sequelize");
 
-const Users = sequelize.define("Users", {
+const Players = sequelize.define("Players", {
   ID: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,
     autoIncrement: true,
   },
-  USER_ID: {
+  LOGIN_ID: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  USER_PASSWORD: {
+  PASSWORD: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  KOR_LAST_NM: {
+  KOR_NM: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  KOR_FIRST_NM: {
+  ENG_NM: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  ENG_LAST_NM: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  ENG_FIRST_NM: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  PHONE_NO: {
+  PHONE: {
     type: DataTypes.STRING,
     unique: true,
     allowNull: false,
   },
-  POSTCODE_NO: {
+  POSTCODE: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
@@ -65,10 +57,10 @@ const Users = sequelize.define("Users", {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  refreshToken: {
+  REFRESH_TOKEN: {
     type: DataTypes.STRING,
     allowNull: true, // refreshToken은 사용자가 로그인 하지 않았을 때 null이 될 수 있습니다.
   },
 });
 
-module.exports = Users;
+module.exports = Players;
