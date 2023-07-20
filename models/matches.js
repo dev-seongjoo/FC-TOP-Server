@@ -12,6 +12,10 @@ const Matches = sequelize.define("Matches", {
     type: DataTypes.DATE,
     allowNull: false,
   },
+  DURATION: {
+    type: DataTypes.DATE,
+    allowNull: false,
+  },
   CHECK_LATE: {
     type: DataTypes.INTEGER,
     allowNull: false,

@@ -248,6 +248,21 @@ app.get("/schedule", async (req, res) => {
   }
 });
 
+app.get("/schedule/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const schedule = await Matches.findOne({
+      where: {
+        ID: id,
+      },
+    });
+    res.status(200).send(schedule);
+  } catch (err) {
+    console.error("에러 발생", err);
+    res.status(500).send("경기 정보를 찾을 수 없습니다.");
+  }
+});
+
 // 서버 시작
 app.listen(PORT, () => {
   console.log(`Server is running on port: ${PORT}`);
