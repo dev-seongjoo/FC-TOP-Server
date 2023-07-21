@@ -1,5 +1,6 @@
 const sequelize = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
+const Locations = require("./locations");
 
 const Matches = sequelize.define("Matches", {
   ID: {
@@ -13,7 +14,7 @@ const Matches = sequelize.define("Matches", {
     allowNull: false,
   },
   DURATION: {
-    type: DataTypes.DATE,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   CHECK_LATE: {
@@ -21,6 +22,10 @@ const Matches = sequelize.define("Matches", {
     allowNull: false,
   },
   LOCATION: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  LOCATION_POSITION: {
     type: DataTypes.STRING,
     allowNull: false,
   },

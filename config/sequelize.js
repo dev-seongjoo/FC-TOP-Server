@@ -14,11 +14,6 @@ const sequelize = new Sequelize(
     host: sequelizeConfig.host,
     dialect: sequelizeConfig.dialect,
     timezone: "Asia/Seoul",
-    // dialectOptions: {
-    //   charset: "utf8mb4",
-    //   dateStrings: true,
-    //   typeCast: true,
-    // },
   }
 );
 

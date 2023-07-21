@@ -20,6 +20,7 @@ const hashAlgo = require("./utils/hashAlgo");
 
 const Players = require("./models/players");
 const Matches = require("./models/matches");
+const Locations = require("./models/locations");
 
 app.use(cors());
 app.use(express.json());
@@ -36,7 +37,8 @@ const initialize = async () => {
   }
 };
 
-app.post("/checkIdDuplication", async (req, res) => {
+// 아이디 중복 확인하기
+app.post("/checkId", async (req, res) => {
   const id = req.body.id;
   try {
     const result = await Players.findOne({
@@ -45,15 +47,16 @@ app.post("/checkIdDuplication", async (req, res) => {
       },
     });
     if (result) {
-      return res.send(true);
+      return res.status(200).send(true);
     } else {
-      return res.send(false);
+      return res.status(200).send(false);
     }
   } catch (error) {
     return res.status(500).send("사용자 검색에 실패했습니다.");
   }
 });
 
+// 휴대폰 중복 확인하기
 app.post("/checkPhoneDuplication", async (req, res) => {
   const phone = req.body.phone;
   try {
@@ -80,7 +83,7 @@ app.post("/sms", (req, res) => {
   return res.send("발송 완료");
 });
 
-// 회원가입 api
+// 회원가입 하기
 app.post("/signUp", async (req, res) => {
   try {
     const birthday = req.body.year.slice(-2) + req.body.month + req.body.day;
@@ -111,7 +114,7 @@ app.post("/signUp", async (req, res) => {
   }
 });
 
-// 로그인 api
+// 로그인 하기
 app.post("/login", async (req, res) => {
   try {
     const { id, password } = req.body;
@@ -150,13 +153,12 @@ app.post("/login", async (req, res) => {
       .status(200)
       .json({ accessToken, refreshToken, player: playerData });
   } catch (err) {
-    console.log("-----에러발생------");
     console.error(err);
     return res.status(500).send("Internal server error");
   }
 });
 
-//
+// 토큰 전송하기
 app.post("/token", async (req, res) => {
   try {
     const rToken = req.body.token;
@@ -187,11 +189,18 @@ app.post("/token", async (req, res) => {
   }
 });
 
+// 경기 일정 등록하기
 app.post("/schedule/register", async (req, res) => {
   try {
-    console.log(req.body);
-    const { date, checkLate, location, customLocation, opponent, notes } =
-      req.body.adjustedFormData;
+    const {
+      date,
+      duration,
+      checkLate,
+      location,
+      locationPosition,
+      opponent,
+      notes,
+    } = req.body.adjustedFormData;
 
     const receivedDate = new Date(date);
     const timeZoneOffset = receivedDate.getTimezoneOffset();
@@ -199,26 +208,19 @@ app.post("/schedule/register", async (req, res) => {
       receivedDate.getTime() - timeZoneOffset * 60 * 1000
     );
 
-    let convertedCheckLate = 0;
-    if (checkLate === "30분 전") {
-      convertedCheckLate = 30;
-    } else if (checkLate === "20분 전") {
-      convertedCheckLate = 20;
-    } else {
-      convertedCheckLate = 10;
-    }
-
-    let convertedLocation = "";
+    let matchLocation = "";
     if (location === "직접 입력") {
-      convertedLocation = customLocation;
+      matchLocation = customLocation;
     } else {
-      convertedLocation = location;
+      matchLocation = location;
     }
 
     const newMatch = await Matches.create({
       DATE: convertedDate,
-      CHECK_LATE: convertedCheckLate,
-      LOCATION: convertedLocation,
+      DURATION: duration,
+      CHECK_LATE: checkLate,
+      LOCATION: matchLocation,
+      LOCATION_POSITION: locationPosition,
       OPPONENT: opponent,
       NOTES: notes,
     });
@@ -230,6 +232,7 @@ app.post("/schedule/register", async (req, res) => {
   }
 });
 
+// 월별 경기 일정 가져오기
 app.get("/schedule", async (req, res) => {
   const { month } = req.query;
   try {
@@ -248,6 +251,7 @@ app.get("/schedule", async (req, res) => {
   }
 });
 
+// 경기 세부 일정 가져오기
 app.get("/schedule/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -263,8 +267,91 @@ app.get("/schedule/:id", async (req, res) => {
   }
 });
 
+// app.put("/schedule/update/:id", async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const {
+//       date,
+//       duration,
+//       checkLate,
+//       location,
+//       locationPosition,
+//       customLocation,
+//       opponent,
+//       notes,
+//     } = req.body;
+
+//     const receivedDate = new Date(date);
+//     const timeZoneOffset = receivedDate.getTimezoneOffset();
+//     const convertedDate = new Date(
+//       receivedDate.getTime() - timeZoneOffset * 60 * 1000
+//     );
+
+//     let convertedCheckLate = 0;
+//     if (checkLate === "30분 전") {
+//       convertedCheckLate = 30;
+//     } else if (checkLate === "20분 전") {
+//       convertedCheckLate = 20;
+//     } else {
+//       convertedCheckLate = 10;
+//     }
+
+//     let convertedLocation = "";
+//     if (location === "직접 입력") {
+//       convertedLocation = customLocation;
+//     } else {
+//       convertedLocation = location;
+//     }
+
+//     const locationInfo = await Locations.findOne({
+//       where: { LOCATION: convertedLocation },
+//     });
+
+//     const updateSchedule = await Matches.update(
+//       {
+//         DATE: convertedDate,
+//         DURATION: duration,
+//         CHECK_LATE: convertedCheckLate,
+//         LOCATION_POSITION: locationPosition,
+//         OPPONENT: opponent,
+//         NOTES: notes,
+//         LOCATION_ID: locationInfo.ID,
+//       },
+//       {
+//         where: {
+//           ID: id,
+//         },
+//       }
+//     );
+
+//     if (!updateSchedule) {
+//       return res.status(404).send("일정을 찾을 수 없습니다.");
+//     }
+//     return res.status(200).send("일정이 성공적으로 수정되었습니다.");
+//   } catch (err) {
+//     console.error("에러 발생", err);
+//     return res.status(500).send("일정 수정에 실패했습니다.");
+//   }
+// });
+
+app.post("/location/position", async (req, res) => {
+  try {
+    const { value } = req.body;
+    const result = await Locations.findOne({
+      where: {
+        LOCATION: value,
+      },
+    });
+    res.status(200).send(result.POSITION);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("경기장 정보를 찾을 수 없습니다.");
+  }
+});
+
 // 서버 시작
 app.listen(PORT, () => {
   console.log(`Server is running on port: ${PORT}`);
 });
+
 initialize();
