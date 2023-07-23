@@ -10,52 +10,52 @@ const Players = sequelize.define("Players", {
   },
   LOGIN_ID: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   PASSWORD: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   KOR_NM: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   ENG_NM: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   PHONE: {
     type: DataTypes.STRING,
     unique: true,
-    allowNull: false,
+    allowNull: true,
   },
   POSTCODE: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
   },
   ADDRESS: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   BIRTHDAY_YMD: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
   },
   POSITION_FIRST: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   POSITION_SECOND: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   POSITION_THIRD: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   FOOT: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   REFRESH_TOKEN: {
     type: DataTypes.STRING,

@@ -21,6 +21,7 @@ const hashAlgo = require("./utils/hashAlgo");
 const Players = require("./models/players");
 const Matches = require("./models/matches");
 const Locations = require("./models/locations");
+const Votes = require("./models/votes");
 
 app.use(cors());
 app.use(express.json());
@@ -127,11 +128,11 @@ app.post("/login", async (req, res) => {
       return;
     }
 
-    const result = await bcrypt.compare(password, player.PASSWORD);
+    // const result = await bcrypt.compare(password, player.PASSWORD);
 
-    if (!result) {
-      return res.status(400).send("아이디 혹은 비밀번호가 잘못되었습니다.");
-    }
+    // if (!result) {
+    //   return res.status(400).send("아이디 혹은 비밀번호가 잘못되었습니다.");
+    // }
     const accessToken = jwt.sign(
       { id: player.LOGIN_ID },
       process.env.ACCESS_TOKEN_SECRET,
@@ -144,14 +145,9 @@ app.post("/login", async (req, res) => {
     );
     await saveRefreshToken(player.LOGIN_ID, refreshToken); // refreshToken을 DB에 저장
 
-    let playerData = player.get({ plain: true });
+    console.log(player);
 
-    delete playerData.PASSWORD;
-    delete playerData.REFRESH_TOKEN;
-
-    return res
-      .status(200)
-      .json({ accessToken, refreshToken, player: playerData });
+    return res.status(200).json({ accessToken, refreshToken, player });
   } catch (err) {
     console.error(err);
     return res.status(500).send("Internal server error");
@@ -208,18 +204,11 @@ app.post("/schedule/register", async (req, res) => {
       receivedDate.getTime() - timeZoneOffset * 60 * 1000
     );
 
-    let matchLocation = "";
-    if (location === "직접 입력") {
-      matchLocation = customLocation;
-    } else {
-      matchLocation = location;
-    }
-
     const newMatch = await Matches.create({
       DATE: convertedDate,
       DURATION: duration,
       CHECK_LATE: checkLate,
-      LOCATION: matchLocation,
+      LOCATION: location,
       LOCATION_POSITION: locationPosition,
       OPPONENT: opponent,
       NOTES: notes,
@@ -267,85 +256,82 @@ app.get("/schedule/:id", async (req, res) => {
   }
 });
 
-// app.put("/schedule/update/:id", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const {
-//       date,
-//       duration,
-//       checkLate,
-//       location,
-//       locationPosition,
-//       customLocation,
-//       opponent,
-//       notes,
-//     } = req.body;
-
-//     const receivedDate = new Date(date);
-//     const timeZoneOffset = receivedDate.getTimezoneOffset();
-//     const convertedDate = new Date(
-//       receivedDate.getTime() - timeZoneOffset * 60 * 1000
-//     );
-
-//     let convertedCheckLate = 0;
-//     if (checkLate === "30분 전") {
-//       convertedCheckLate = 30;
-//     } else if (checkLate === "20분 전") {
-//       convertedCheckLate = 20;
-//     } else {
-//       convertedCheckLate = 10;
-//     }
-
-//     let convertedLocation = "";
-//     if (location === "직접 입력") {
-//       convertedLocation = customLocation;
-//     } else {
-//       convertedLocation = location;
-//     }
-
-//     const locationInfo = await Locations.findOne({
-//       where: { LOCATION: convertedLocation },
-//     });
-
-//     const updateSchedule = await Matches.update(
-//       {
-//         DATE: convertedDate,
-//         DURATION: duration,
-//         CHECK_LATE: convertedCheckLate,
-//         LOCATION_POSITION: locationPosition,
-//         OPPONENT: opponent,
-//         NOTES: notes,
-//         LOCATION_ID: locationInfo.ID,
-//       },
-//       {
-//         where: {
-//           ID: id,
-//         },
-//       }
-//     );
-
-//     if (!updateSchedule) {
-//       return res.status(404).send("일정을 찾을 수 없습니다.");
-//     }
-//     return res.status(200).send("일정이 성공적으로 수정되었습니다.");
-//   } catch (err) {
-//     console.error("에러 발생", err);
-//     return res.status(500).send("일정 수정에 실패했습니다.");
-//   }
-// });
-
 app.post("/location/position", async (req, res) => {
   try {
     const { value } = req.body;
     const result = await Locations.findOne({
       where: {
-        LOCATION: value,
+        NAME: value,
       },
     });
     res.status(200).send(result.POSITION);
   } catch (err) {
     console.error(err);
     res.status(500).send("경기장 정보를 찾을 수 없습니다.");
+  }
+});
+
+app.post("/vote", async (req, res) => {
+  try {
+    const { matchId, playerId, attendance } = req.body;
+    console.log(matchId, playerId, attendance);
+
+    const vote = await Votes.findOne({
+      where: {
+        MATCH_ID: matchId,
+        PLAYER_ID: playerId,
+      },
+    });
+
+    if (vote) {
+      vote.ATTENDANCE = attendance;
+      await vote.save();
+    } else {
+      await Votes.create({
+        MATCH_ID: matchId,
+        PLAYER_ID: playerId,
+        ATTENDANCE: attendance,
+      });
+    }
+    res.status(200).send("투표 완료");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("에러 발생");
+  }
+});
+
+app.get("/vote/:matchId/:playerId", async (req, res) => {
+  const { matchId, playerId } = req.params;
+
+  try {
+    const vote = await Votes.findOne({
+      where: {
+        MATCH_ID: matchId,
+        PLAYER_ID: playerId,
+      },
+    });
+
+    if (vote) {
+      res.status(200).send(vote);
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("서버 에러");
+  }
+});
+
+app.get("/vote/:matchId", async (req, res) => {
+  const { matchId } = req.params;
+
+  try {
+    const vote = await Votes.findAll({
+      where: {
+        MATCH_ID: matchId,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("서버 에러");
   }
 });
 
