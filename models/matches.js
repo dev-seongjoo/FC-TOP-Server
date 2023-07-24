@@ -25,6 +25,14 @@ const Matches = sequelize.define("Matches", {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  CUSTOM_LOCATION: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  CUSTOM_LOCATION_ADDRESS: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   LOCATION_POSITION: {
     type: DataTypes.STRING,
     allowNull: false,

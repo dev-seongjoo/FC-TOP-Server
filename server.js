@@ -193,6 +193,8 @@ app.post("/schedule/register", async (req, res) => {
       duration,
       checkLate,
       location,
+      customLocation,
+      customLocationAddress,
       locationPosition,
       opponent,
       notes,
@@ -204,11 +206,13 @@ app.post("/schedule/register", async (req, res) => {
       receivedDate.getTime() - timeZoneOffset * 60 * 1000
     );
 
-    const newMatch = await Matches.create({
+    await Matches.create({
       DATE: convertedDate,
       DURATION: duration,
       CHECK_LATE: checkLate,
       LOCATION: location,
+      CUSTOM_LOCATION: customLocation,
+      CUSTOM_LOCATION_ADDRESS: customLocationAddress,
       LOCATION_POSITION: locationPosition,
       OPPONENT: opponent,
       NOTES: notes,
@@ -366,6 +370,61 @@ app.get("/vote/:matchId", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send("서버 에러");
+  }
+});
+
+app.put("/schedule/:id", async (req, res) => {
+  console.log(req.body);
+
+  const { id } = req.params;
+  const {
+    date,
+    duration,
+    checkLate,
+    location,
+    customLocation,
+    customLocationAddress,
+    locationPosition,
+    opponent,
+    notes,
+  } = req.body;
+
+  try {
+    const match = await Matches.findOne({
+      where: {
+        ID: id,
+      },
+    });
+
+    console.log(match);
+    if (!match) {
+      return res.status(404).json("존재하지 않는 경기입니다.");
+    }
+
+    console.log(match);
+
+    const receivedDate = new Date(date);
+    const timeZoneOffset = receivedDate.getTimezoneOffset();
+    const convertedDate = new Date(
+      receivedDate.getTime() - timeZoneOffset * 60 * 1000
+    );
+
+    match.DATE = convertedDate;
+    match.DURATION = duration;
+    match.CHECK_LATE = checkLate;
+    match.LOCATION = location;
+    match.CUSTOM_LOCATION = customLocation;
+    match.CUSTOM_LOCATION_ADDRESS = customLocationAddress;
+    match.LOCATION_POSITION = locationPosition;
+    match.OPPONENT = opponent;
+    match.NOTES = notes;
+
+    await match.save();
+
+    res.status(200).send("저장 완료");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("에러 발생");
   }
 });
 
