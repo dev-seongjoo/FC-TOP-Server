@@ -300,23 +300,56 @@ app.post("/vote", async (req, res) => {
   }
 });
 
-app.get("/vote/:matchId/:playerId", async (req, res) => {
-  const { matchId, playerId } = req.params;
+app.get("/voteresult/:matchId", async (req, res) => {
+  const { matchId } = req.params;
 
   try {
-    const vote = await Votes.findOne({
+    const voteResult = await Votes.findAll({
       where: {
         MATCH_ID: matchId,
-        PLAYER_ID: playerId,
       },
     });
 
-    if (vote) {
-      res.status(200).send(vote);
-    }
+    const attendanceList = [];
+    const absenceList = [];
+    const noVoteList = [];
+
+    // Get all players
+    const allPlayers = await Players.findAll();
+
+    // Prepare a list of player IDs who have voted
+    const voterIds = voteResult.map((vote) => vote.PLAYER_ID);
+
+    // Filter out players who have not voted
+    const noVotePlayers = allPlayers.filter(
+      (player) => !voterIds.includes(player.ID)
+    );
+
+    // Add players who have not voted to the noVoteList
+    noVotePlayers.forEach((player) => {
+      noVoteList.push(player.KOR_NM);
+    });
+
+    await Promise.all(
+      voteResult.map(async (vote) => {
+        const player = await Players.findOne({
+          where: {
+            ID: vote.PLAYER_ID,
+          },
+        });
+
+        if (vote.ATTENDANCE === "참석") {
+          attendanceList.push(player.KOR_NM);
+        } else {
+          absenceList.push(player.KOR_NM);
+        }
+      })
+    );
+
+    res.status(200).send({ attendanceList, absenceList, noVoteList });
   } catch (err) {
     console.error(err);
-    res.status(500).send("서버 에러");
+    res.status(500).send("에러 발생");
   }
 });
 
@@ -324,11 +357,12 @@ app.get("/vote/:matchId", async (req, res) => {
   const { matchId } = req.params;
 
   try {
-    const vote = await Votes.findAll({
+    const votes = await Votes.findAll({
       where: {
         MATCH_ID: matchId,
       },
     });
+    res.status(200).send(votes);
   } catch (err) {
     console.error(err);
     res.status(500).send("서버 에러");

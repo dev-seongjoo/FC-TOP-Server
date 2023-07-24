@@ -34,4 +34,7 @@ const Votes = sequelize.define("Votes", {
   },
 });
 
+Votes.belongsTo(Players, { foreignKey: "PLAYER_ID" });
+Players.hasMany(Votes, { foreignKey: "PLAYER_ID" });
+
 module.exports = Votes;
