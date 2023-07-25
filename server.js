@@ -428,6 +428,24 @@ app.put("/schedule/:id", async (req, res) => {
   }
 });
 
+app.delete("/schedule/:id", async (req, res) => {
+  const { id } = req.params;
+
+  console.log(id);
+
+  try {
+    await Matches.destroy({
+      where: {
+        ID: id,
+      },
+    });
+    res.status(200).send("삭제 완료");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("에러 발생");
+  }
+});
+
 // 서버 시작
 app.listen(PORT, () => {
   console.log(`Server is running on port: ${PORT}`);

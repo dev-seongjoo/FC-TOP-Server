@@ -13,26 +13,19 @@ const Votes = sequelize.define("Votes", {
   MATCH_ID: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    references: {
-      // 외래키 설정
-      model: Matches, // 참조하는 테이블의 모델
-      key: "ID", // 참조하는 테이블의 기본키
-    },
   },
   PLAYER_ID: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    references: {
-      // 외래키 설정
-      model: Players, // 참조하는 테이블의 모델
-      key: "ID", // 참조하는 테이블의 기본키
-    },
   },
   ATTENDANCE: {
     type: DataTypes.STRING,
     allowNull: false,
   },
 });
+
+Votes.belongsTo(Matches, { foreignKey: "MATCH_ID", onDelete: "CASCADE" });
+Matches.hasMany(Votes, { foreignKey: "MATCH_ID" });
 
 Votes.belongsTo(Players, { foreignKey: "PLAYER_ID" });
 Players.hasMany(Votes, { foreignKey: "PLAYER_ID" });
