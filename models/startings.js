@@ -1,14 +1,14 @@
 const sequelize = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
 
-const Votes = sequelize.define("Votes", {
+const Startings = sequelize.define("Startings", {
   ID: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,
     autoIncrement: true,
   },
-  MATCH_ID: {
+  QUARTER_ID: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
@@ -16,10 +16,10 @@ const Votes = sequelize.define("Votes", {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
-  ATTENDANCE: {
+  POSITION: {
     type: DataTypes.STRING,
     allowNull: false,
   },
 });
 
-module.exports = Votes;
+module.exports = Startings;

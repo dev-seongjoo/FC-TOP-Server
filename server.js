@@ -22,6 +22,8 @@ const Players = require("./models/players");
 const Matches = require("./models/matches");
 const Locations = require("./models/locations");
 const Votes = require("./models/votes");
+const Startings = require("./models/startings");
+const Quarters = require("./models/quarters");
 
 app.use(cors());
 app.use(express.json());
@@ -245,12 +247,12 @@ app.get("/schedule", async (req, res) => {
 });
 
 // 경기 세부 일정 가져오기
-app.get("/schedule/:id", async (req, res) => {
+app.get("/schedule/:match", async (req, res) => {
   try {
-    const id = req.params.id;
+    const { match } = req.params;
     const schedule = await Matches.findOne({
       where: {
-        ID: id,
+        ID: match,
       },
     });
     res.status(200).send(schedule);
@@ -304,13 +306,13 @@ app.post("/vote", async (req, res) => {
   }
 });
 
-app.get("/voteresult/:matchId", async (req, res) => {
-  const { matchId } = req.params;
+app.get("/voteresult/:match", async (req, res) => {
+  const { match } = req.params;
 
   try {
     const voteResult = await Votes.findAll({
       where: {
-        MATCH_ID: matchId,
+        MATCH_ID: match,
       },
     });
 
@@ -357,13 +359,13 @@ app.get("/voteresult/:matchId", async (req, res) => {
   }
 });
 
-app.get("/vote/:matchId", async (req, res) => {
-  const { matchId } = req.params;
+app.get("/vote/:match", async (req, res) => {
+  const { match } = req.params;
 
   try {
     const votes = await Votes.findAll({
       where: {
-        MATCH_ID: matchId,
+        MATCH_ID: match,
       },
     });
     res.status(200).send(votes);
@@ -374,8 +376,6 @@ app.get("/vote/:matchId", async (req, res) => {
 });
 
 app.put("/schedule/:id", async (req, res) => {
-  console.log(req.body);
-
   const { id } = req.params;
   const {
     date,
@@ -440,6 +440,55 @@ app.delete("/schedule/:id", async (req, res) => {
       },
     });
     res.status(200).send("삭제 완료");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("에러 발생");
+  }
+});
+
+app.post("/playerInfo", async (req, res) => {
+  const { player } = req.body;
+  try {
+    const playerInfo = await Players.findOne({
+      where: {
+        KOR_NM: player,
+      },
+    });
+
+    res.status(200).send(playerInfo);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("에러 발생");
+  }
+});
+
+app.post("/startinglineup/:match/:quarter", async (req, res) => {
+  try {
+    const { match, quarter } = req.params;
+    const { selectedPlayer, currentFormation } = req.body;
+
+    const createdQuarter = await Quarters.create({
+      QUARTER: quarter,
+      FORMATION: currentFormation,
+      MATCH_ID: match,
+    });
+
+    await Promise.all(
+      Object.entries(selectedPlayer).map(async ([key, value]) => {
+        const playerName = value[0];
+        const position = value[1];
+        const player = await Players.findOne({ where: { KOR_NM: playerName } });
+        const playerId = player.ID;
+
+        await Startings.create({
+          POSITION: position,
+          QUARTER_ID: createdQuarter.ID,
+          PLAYER_ID: playerId,
+        });
+      })
+    );
+
+    res.status(200).send("저장 완료");
   } catch (err) {
     console.error(err);
     res.status(500).send("에러 발생");

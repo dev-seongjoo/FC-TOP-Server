@@ -1,5 +1,7 @@
 const sequelize = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
+const Startings = require("./startings");
+const Votes = require("./votes");
 
 const Players = sequelize.define("Players", {
   ID: {
@@ -61,6 +63,19 @@ const Players = sequelize.define("Players", {
     type: DataTypes.STRING,
     allowNull: true, // refreshToken은 사용자가 로그인 하지 않았을 때 null이 될 수 있습니다.
   },
+});
+
+Players.hasMany(Votes, {
+  foreignKey: "PLAYER_ID",
+});
+Votes.belongsTo(Players, {
+  foreignKey: "PLAYER_ID",
+});
+Players.hasMany(Startings, {
+  foreignKey: "PLAYER_ID",
+});
+Startings.belongsTo(Players, {
+  foreignKey: "PLAYER_ID",
 });
 
 module.exports = Players;
