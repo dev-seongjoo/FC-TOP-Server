@@ -320,18 +320,14 @@ app.get("/voteresult/:match", async (req, res) => {
     const absenceList = [];
     const noVoteList = [];
 
-    // Get all players
     const allPlayers = await Players.findAll();
 
-    // Prepare a list of player IDs who have voted
     const voterIds = voteResult.map((vote) => vote.PLAYER_ID);
 
-    // Filter out players who have not voted
     const noVotePlayers = allPlayers.filter(
       (player) => !voterIds.includes(player.ID)
     );
 
-    // Add players who have not voted to the noVoteList
     noVotePlayers.forEach((player) => {
       noVoteList.push(player.KOR_NM);
     });
@@ -375,8 +371,8 @@ app.get("/vote/:match", async (req, res) => {
   }
 });
 
-app.put("/schedule/:id", async (req, res) => {
-  const { id } = req.params;
+app.put("/schedule/:match", async (req, res) => {
+  const { match } = req.params;
   const {
     date,
     duration,
@@ -390,18 +386,16 @@ app.put("/schedule/:id", async (req, res) => {
   } = req.body;
 
   try {
-    const match = await Matches.findOne({
+    const selectedMatch = await Matches.findOne({
       where: {
-        ID: id,
+        ID: match,
       },
     });
 
-    console.log(match);
-    if (!match) {
+    console.log(selectedMatch);
+    if (!selectedMatch) {
       return res.status(404).json("존재하지 않는 경기입니다.");
     }
-
-    console.log(match);
 
     const receivedDate = new Date(date);
     const timeZoneOffset = receivedDate.getTimezoneOffset();
@@ -419,7 +413,7 @@ app.put("/schedule/:id", async (req, res) => {
     match.OPPONENT = opponent;
     match.NOTES = notes;
 
-    await match.save();
+    await selectedMatch.save();
 
     res.status(200).send("저장 완료");
   } catch (err) {
@@ -428,15 +422,13 @@ app.put("/schedule/:id", async (req, res) => {
   }
 });
 
-app.delete("/schedule/:id", async (req, res) => {
-  const { id } = req.params;
-
-  console.log(id);
+app.delete("/schedule/:match", async (req, res) => {
+  const { match } = req.params;
 
   try {
     await Matches.destroy({
       where: {
-        ID: id,
+        ID: match,
       },
     });
     res.status(200).send("삭제 완료");
@@ -462,33 +454,95 @@ app.post("/playerInfo", async (req, res) => {
   }
 });
 
-app.post("/startinglineup/:match/:quarter", async (req, res) => {
+app.post("/:match/:quarter", async (req, res) => {
   try {
     const { match, quarter } = req.params;
     const { selectedPlayer, currentFormation } = req.body;
 
-    const createdQuarter = await Quarters.create({
-      QUARTER: quarter,
-      FORMATION: currentFormation,
-      MATCH_ID: match,
+    const [selectedQuarter, createdQuarter] = await Quarters.findOrCreate({
+      where: {
+        MATCH_ID: match,
+        QUARTER: quarter,
+      },
+      defaults: {
+        MATCH_ID: match,
+        QUARTER: quarter,
+        FORMATION: currentFormation,
+      },
     });
 
-    await Promise.all(
-      Object.entries(selectedPlayer).map(async ([key, value]) => {
-        const playerName = value[0];
-        const position = value[1];
-        const player = await Players.findOne({ where: { KOR_NM: playerName } });
-        const playerId = player.ID;
+    if (selectedQuarter) {
+      await Quarters.update(
+        {
+          FORMATION: currentFormation,
+        },
+        {
+          where: {
+            MATCH_ID: match,
+            QUARTER: quarter,
+          },
+        }
+      );
 
-        await Startings.create({
-          POSITION: position,
-          QUARTER_ID: createdQuarter.ID,
-          PLAYER_ID: playerId,
-        });
-      })
-    );
+      const newStartings = Object.entries(selectedPlayer).map(
+        ([key, value]) => {
+          const playerName = value[0];
+          const position = value[1];
+
+          return {
+            PLAYER: playerName,
+            POSITION: position,
+            QUARTER_ID: selectedQuarter.ID,
+          };
+        }
+      );
+
+      await Startings.destroy({ where: { QUARTER_ID: selectedQuarter.ID } });
+      await Startings.bulkCreate(newStartings);
+    } else {
+      await Promise.all(
+        Object.entries(selectedPlayer).map(async ([key, value]) => {
+          const playerName = value[0];
+          const position = value[1];
+
+          await Startings.create({
+            PLAYER: playerName,
+            POSITION: position,
+            QUARTER_ID: createdQuarter.ID,
+          });
+        })
+      );
+    }
 
     res.status(200).send("저장 완료");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("에러 발생");
+  }
+});
+
+app.get("/:match/:quarter", async (req, res) => {
+  try {
+    const { match, quarter } = req.params;
+
+    const selectedQuarter = await Quarters.findOne({
+      where: {
+        MATCH_ID: match,
+        QUARTER: quarter,
+      },
+    });
+
+    if (selectedQuarter) {
+      const formation = selectedQuarter.FORMATION;
+      const selectedStartings = await Startings.findAll({
+        where: {
+          QUARTER_ID: selectedQuarter.ID,
+        },
+      });
+      res.status(200).json({ formation, selectedStartings });
+    } else {
+      res.status(404).send("선발 명단이 존재하지 않습니다.");
+    }
   } catch (err) {
     console.error(err);
     res.status(500).send("에러 발생");

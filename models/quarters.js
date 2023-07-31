@@ -32,6 +32,7 @@ Quarters.hasMany(Startings, {
 });
 Startings.belongsTo(Quarters, {
   foreignKey: "QUARTER_ID",
+  onDelete: "CASCADE",
 });
 
 module.exports = Quarters;

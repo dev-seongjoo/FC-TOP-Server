@@ -71,11 +71,5 @@ Players.hasMany(Votes, {
 Votes.belongsTo(Players, {
   foreignKey: "PLAYER_ID",
 });
-Players.hasMany(Startings, {
-  foreignKey: "PLAYER_ID",
-});
-Startings.belongsTo(Players, {
-  foreignKey: "PLAYER_ID",
-});
 
 module.exports = Players;
