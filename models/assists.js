@@ -1,14 +1,14 @@
 const sequelize = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
 
-const Goals = sequelize.define("Goals", {
+const Assists = sequelize.define("Assists", {
   ID: {
     type: DataTypes.INTEGER,
     allowNull: false,
     primaryKey: true,
     autoIncrement: true,
   },
-  QUARTER_ID: {
+  GOAL_ID: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
@@ -16,10 +16,10 @@ const Goals = sequelize.define("Goals", {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
-  GOAL_TIME: {
+  ASSIST_TIME: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
 });
 
-module.exports = Goals;
+module.exports = Assists;

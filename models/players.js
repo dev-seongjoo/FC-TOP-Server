@@ -1,8 +1,9 @@
 const sequelize = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
-const Startings = require("./startings");
 const Votes = require("./votes");
-const Goals = require("./goal");
+const Goals = require("./goals");
+const Assists = require("./assists");
+const Subs = require("./subs");
 
 const Players = sequelize.define("Players", {
   ID: {
@@ -76,6 +77,18 @@ Players.hasMany(Goals, {
   foreignKey: "PLAYER_ID",
 });
 Goals.belongsTo(Players, {
+  foreignKey: "PLAYER_ID",
+});
+Players.hasMany(Assists, {
+  foreignKey: "PLAYER_ID",
+});
+Assists.belongsTo(Players, {
+  foreignKey: "PLAYER_ID",
+});
+Players.hasMany(Subs, {
+  foreignKey: "PLAYER_ID",
+});
+Subs.belongsTo(Players, {
   foreignKey: "PLAYER_ID",
 });
 

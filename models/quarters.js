@@ -1,6 +1,9 @@
 const sequelize = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
 const Startings = require("./startings");
+const Goals = require("./goals");
+const Assists = require("./assists");
+const Subs = require("./subs");
 
 const Quarters = sequelize.define("Quarters", {
   ID: {
@@ -31,6 +34,22 @@ Quarters.hasMany(Startings, {
   foreignKey: "QUARTER_ID",
 });
 Startings.belongsTo(Quarters, {
+  foreignKey: "QUARTER_ID",
+  onDelete: "CASCADE",
+});
+
+Quarters.hasMany(Goals, {
+  foreignKey: "QUARTER_ID",
+});
+Goals.belongsTo(Quarters, {
+  foreignKey: "QUARTER_ID",
+  onDelete: "CASCADE",
+});
+
+Quarters.hasMany(Subs, {
+  foreignKey: "QUARTER_ID",
+});
+Subs.belongsTo(Quarters, {
   foreignKey: "QUARTER_ID",
   onDelete: "CASCADE",
 });

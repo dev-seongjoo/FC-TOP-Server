@@ -24,6 +24,9 @@ const Locations = require("./models/locations");
 const Votes = require("./models/votes");
 const Startings = require("./models/startings");
 const Quarters = require("./models/quarters");
+const Goals = require("./models/goals");
+const Assists = require("./models/assists");
+const Subs = require("./models/subs");
 
 app.use(cors());
 app.use(express.json());
@@ -386,34 +389,30 @@ app.put("/schedule/:match", async (req, res) => {
   } = req.body;
 
   try {
-    const selectedMatch = await Matches.findOne({
-      where: {
-        ID: match,
-      },
-    });
-
-    console.log(selectedMatch);
-    if (!selectedMatch) {
-      return res.status(404).json("존재하지 않는 경기입니다.");
-    }
-
     const receivedDate = new Date(date);
     const timeZoneOffset = receivedDate.getTimezoneOffset();
     const convertedDate = new Date(
       receivedDate.getTime() - timeZoneOffset * 60 * 1000
     );
 
-    match.DATE = convertedDate;
-    match.DURATION = duration;
-    match.CHECK_LATE = checkLate;
-    match.LOCATION = location;
-    match.CUSTOM_LOCATION = customLocation;
-    match.CUSTOM_LOCATION_ADDRESS = customLocationAddress;
-    match.LOCATION_POSITION = locationPosition;
-    match.OPPONENT = opponent;
-    match.NOTES = notes;
-
-    await selectedMatch.save();
+    await Matches.update(
+      {
+        DATE: convertedDate,
+        DURATION: duration,
+        CHECK_LATE: checkLate,
+        LOCATION: location,
+        CUSTOM_LOCATION: customLocation,
+        CUSTOM_LOCATION_ADDRESS: customLocationAddress,
+        LOCATION_POSITION: locationPosition,
+        OPPONENT: opponent,
+        NOTES: notes,
+      },
+      {
+        where: {
+          ID: match,
+        },
+      }
+    );
 
     res.status(200).send("저장 완료");
   } catch (err) {
@@ -543,6 +542,102 @@ app.get("/:match/:quarter", async (req, res) => {
     } else {
       res.status(404).send("선발 명단이 존재하지 않습니다.");
     }
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("에러 발생");
+  }
+});
+
+app.post("/record/:match/:quarter", async (req, res) => {
+  try {
+    const { match, quarter } = req.params;
+    const { results } = req.body;
+
+    const selectedQuarter = await Quarters.findOne({
+      where: {
+        MATCH_ID: match,
+        QUARTER: quarter,
+      },
+    });
+
+    results.map(async (result) => {
+      if (result.event === "득점") {
+        try {
+          const player1Info = await Players.findOne({
+            where: {
+              KOR_NM: result.player1,
+            },
+          });
+
+          if (player1Info) {
+            const goal = await Goals.create({
+              QUARTER_ID: selectedQuarter.ID,
+              PLAYER_ID: player1Info.ID,
+              GOAL_TIME: result.time,
+            });
+
+            if (result.player2 !== "없음") {
+              const player2Info = await Players.findOne({
+                where: {
+                  KOR_NM: result.player2,
+                },
+              });
+
+              if (player2Info) {
+                await Assists.create({
+                  GOAL_ID: goal.ID,
+                  PLAYER_ID: player2Info.ID,
+                  ASSIST_TIME: result.time,
+                });
+              } else {
+                throw new Error("어시스트 선수 정보를 찾을 수 없습니다.");
+              }
+            }
+
+            res.status(200).send("저장 완료");
+          } else {
+            throw new Error("골 선수 정보를 찾을 수 없습니다.");
+          }
+        } catch (err) {
+          console.error(err);
+          res.status(500).send("에러 발생");
+        }
+      }
+
+      if (result.event === "교체") {
+        const player1Info = await Players.findOne({
+          where: {
+            KOR_NM: result.player1,
+          },
+        });
+
+        const player2Info = await Players.findOne({
+          where: {
+            KOR_NM: result.player2,
+          },
+        });
+
+        if (player1Info && player2Info) {
+          await Promise.all([
+            Subs.create({
+              QUARTER_ID: selectedQuarter.ID,
+              PLAYER_ID: player2Info.ID,
+              SUB: "IN",
+              SUB_TIME: result.time,
+            }),
+            Subs.create({
+              QUARTER_ID: selectedQuarter.ID,
+              PLAYER_ID: player1Info.ID,
+              SUB: "OUT",
+              SUB_TIME: result.time,
+            }),
+          ]);
+          res.status(200).send("저장 완료");
+        } else {
+          res.status(400).send("선수 정보를 찾을 수 없습니다.");
+        }
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send("에러 발생");
