@@ -4,6 +4,7 @@ const Startings = require("./startings");
 const Goals = require("./goals");
 const Assists = require("./assists");
 const Subs = require("./subs");
+const Lps = require("./lps");
 
 const Quarters = sequelize.define("Quarters", {
   ID: {
@@ -50,6 +51,14 @@ Quarters.hasMany(Subs, {
   foreignKey: "QUARTER_ID",
 });
 Subs.belongsTo(Quarters, {
+  foreignKey: "QUARTER_ID",
+  onDelete: "CASCADE",
+});
+
+Quarters.hasMany(Lps, {
+  foreignKey: "QUARTER_ID",
+});
+Lps.belongsTo(Quarters, {
   foreignKey: "QUARTER_ID",
   onDelete: "CASCADE",
 });

@@ -27,6 +27,7 @@ const Quarters = require("./models/quarters");
 const Goals = require("./models/goals");
 const Assists = require("./models/assists");
 const Subs = require("./models/subs");
+const Lps = require("./models/lps");
 
 app.use(cors());
 app.use(express.json());
@@ -561,43 +562,52 @@ app.post("/record/:match/:quarter", async (req, res) => {
     });
 
     results.map(async (result) => {
-      if (result.event === "득점") {
+      if (result.event === "실점") {
         try {
-          const player1Info = await Players.findOne({
+          const LpPlayer = await Players.findOne({
             where: {
               KOR_NM: result.player1,
             },
           });
 
-          if (player1Info) {
-            const goal = await Goals.create({
-              QUARTER_ID: selectedQuarter.ID,
-              PLAYER_ID: player1Info.ID,
-              GOAL_TIME: result.time,
+          await Lps.create({
+            QUARTER_ID: selectedQuarter.ID,
+            PLAYER_ID: LpPlayer.ID,
+            LP_TIME: result.time,
+          });
+          res.status(200).send("저장 완료");
+        } catch (err) {
+          console.error(err);
+          res.status(500).send("실점 에러 발생");
+        }
+      }
+
+      if (result.event === "득점") {
+        try {
+          const scorer = await Players.findOne({
+            where: {
+              KOR_NM: result.player1,
+            },
+          });
+          const goal = await Goals.create({
+            QUARTER_ID: selectedQuarter.ID,
+            PLAYER_ID: scorer.ID,
+            GOAL_TIME: result.time,
+          });
+
+          if (result.player2 !== "없음") {
+            const assistant = await Players.findOne({
+              where: {
+                KOR_NM: result.player2,
+              },
             });
-
-            if (result.player2 !== "없음") {
-              const player2Info = await Players.findOne({
-                where: {
-                  KOR_NM: result.player2,
-                },
-              });
-
-              if (player2Info) {
-                await Assists.create({
-                  GOAL_ID: goal.ID,
-                  PLAYER_ID: player2Info.ID,
-                  ASSIST_TIME: result.time,
-                });
-              } else {
-                throw new Error("어시스트 선수 정보를 찾을 수 없습니다.");
-              }
-            }
-
-            res.status(200).send("저장 완료");
-          } else {
-            throw new Error("골 선수 정보를 찾을 수 없습니다.");
+            await Assists.create({
+              GOAL_ID: goal.ID,
+              PLAYER_ID: assistant.ID,
+              ASSIST_TIME: result.time,
+            });
           }
+          res.status(200).send("저장 완료");
         } catch (err) {
           console.error(err);
           res.status(500).send("에러 발생");
@@ -605,36 +615,37 @@ app.post("/record/:match/:quarter", async (req, res) => {
       }
 
       if (result.event === "교체") {
-        const player1Info = await Players.findOne({
-          where: {
-            KOR_NM: result.player1,
-          },
-        });
+        try {
+          const subOutPlayer = await Players.findOne({
+            where: {
+              KOR_NM: result.player1,
+            },
+          });
 
-        const player2Info = await Players.findOne({
-          where: {
-            KOR_NM: result.player2,
-          },
-        });
+          const subInPlayer = await Players.findOne({
+            where: {
+              KOR_NM: result.player2,
+            },
+          });
 
-        if (player1Info && player2Info) {
           await Promise.all([
             Subs.create({
               QUARTER_ID: selectedQuarter.ID,
-              PLAYER_ID: player2Info.ID,
+              PLAYER_ID: subInPlayer.ID,
               SUB: "IN",
               SUB_TIME: result.time,
             }),
             Subs.create({
               QUARTER_ID: selectedQuarter.ID,
-              PLAYER_ID: player1Info.ID,
+              PLAYER_ID: subOutPlayer.ID,
               SUB: "OUT",
               SUB_TIME: result.time,
             }),
           ]);
           res.status(200).send("저장 완료");
-        } else {
-          res.status(400).send("선수 정보를 찾을 수 없습니다.");
+        } catch (err) {
+          console.error(err);
+          res.status(500).send("에러 발생");
         }
       }
     });

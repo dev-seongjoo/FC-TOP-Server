@@ -4,6 +4,7 @@ const Votes = require("./votes");
 const Goals = require("./goals");
 const Assists = require("./assists");
 const Subs = require("./subs");
+const Lps = require("./lps");
 
 const Players = sequelize.define("Players", {
   ID: {
@@ -73,22 +74,32 @@ Players.hasMany(Votes, {
 Votes.belongsTo(Players, {
   foreignKey: "PLAYER_ID",
 });
+
 Players.hasMany(Goals, {
   foreignKey: "PLAYER_ID",
 });
 Goals.belongsTo(Players, {
   foreignKey: "PLAYER_ID",
 });
+
 Players.hasMany(Assists, {
   foreignKey: "PLAYER_ID",
 });
 Assists.belongsTo(Players, {
   foreignKey: "PLAYER_ID",
 });
+
 Players.hasMany(Subs, {
   foreignKey: "PLAYER_ID",
 });
 Subs.belongsTo(Players, {
+  foreignKey: "PLAYER_ID",
+});
+
+Players.hasMany(Lps, {
+  foreignKey: "PLAYER_ID",
+});
+Lps.belongsTo(Players, {
   foreignKey: "PLAYER_ID",
 });
 
