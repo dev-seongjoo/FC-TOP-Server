@@ -30,6 +30,11 @@ const Quarters = sequelize.define("Quarters", {
     allowNull: false,
     defaultValue: false,
   },
+  FULL_TIME: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0,
+  },
   QUARTER_VIDEO: {
     type: DataTypes.STRING,
     allowNull: true,

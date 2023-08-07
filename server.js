@@ -522,7 +522,8 @@ app.post("/:match/:quarter", async (req, res) => {
   }
 });
 
-app.get("/:match/:quarter", async (req, res) => {
+// 쿼터별 포메이션 및 선발 명단 가져오기
+app.get("/starting/:match/:quarter", async (req, res) => {
   try {
     const { match, quarter } = req.params;
 
@@ -550,10 +551,11 @@ app.get("/:match/:quarter", async (req, res) => {
   }
 });
 
+// 쿼터별 기록 저장하기
 app.post("/record/:match/:quarter", async (req, res) => {
   try {
     const { match, quarter } = req.params;
-    const { results } = req.body;
+    const { results, time } = req.body;
 
     const selectedQuarter = await Quarters.findOne({
       where: {
@@ -565,6 +567,7 @@ app.post("/record/:match/:quarter", async (req, res) => {
     await Quarters.update(
       {
         RECORD: true,
+        FULL_TIME: time,
       },
       {
         where: { ID: selectedQuarter.ID },
@@ -683,9 +686,114 @@ app.get("/record/check/:match", async (req, res) => {
   }
 });
 
+// 쿼터 정보 가져오기
+app.get("/:match/:quarter", async (req, res) => {
+  const { match, quarter } = req.params;
+
+  try {
+    const quarterInfo = await Quarters.findOne({
+      where: {
+        MATCH_ID: match,
+        QUARTER: quarter,
+      },
+    });
+    res.status(200).send(quarterInfo);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("에러 발생");
+  }
+});
+
+// 쿼터 득점 정보 가져오기
+app.get("/goal/:match/:quarter", async (req, res) => {
+  const { match, quarter } = req.params;
+
+  try {
+    const quarterInfo = await Quarters.findOne({
+      where: {
+        MATCH_ID: match,
+        QUARTER: quarter,
+      },
+    });
+
+    const goalInfo = await Goals.findAll({
+      where: {
+        QUARTER_ID: quarterInfo.ID,
+      },
+      include: [
+        {
+          model: Players,
+          attributes: ["KOR_NM"],
+        },
+      ],
+    });
+
+    for (const goal of goalInfo) {
+      const assistInfo = await Assists.findAll({
+        where: {
+          GOAL_ID: goal.ID,
+        },
+        include: [
+          {
+            model: Players,
+            attributes: ["KOR_NM"],
+          },
+        ],
+      });
+
+      goal.setDataValue("assists", assistInfo);
+    }
+
+    const subInfo = await Subs.findAll({
+      where: {
+        QUARTER_ID: quarterInfo.ID,
+      },
+      include: [
+        {
+          model: Players,
+          attributes: ["KOR_NM"],
+        },
+      ],
+    });
+
+    const lpInfo = await Lps.findAll({
+      where: {
+        QUARTER_ID: quarterInfo.ID,
+      },
+      include: [
+        {
+          model: Players,
+          attributes: ["KOR_NM"],
+        },
+      ],
+    });
+
+    res.status(200).json({ goals: goalInfo, subs: subInfo, lps: lpInfo });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("에러 발생");
+  }
+});
+
+app.get("/player/:num", async (req, res) => {
+  const { num } = req.params;
+
+  try {
+    const playerInfo = await Players.findOne({
+      where: {
+        ID: num,
+      },
+    });
+
+    res.status(200).send(playerInfo);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("에러 발생");
+  }
+});
+
 // 서버 시작
 app.listen(PORT, () => {
   console.log(`Server is running on port: ${PORT}`);
+  initialize();
 });
-
-initialize();
