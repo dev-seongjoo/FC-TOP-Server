@@ -25,6 +25,11 @@ const Quarters = sequelize.define("Quarters", {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  RECORD: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
   QUARTER_VIDEO: {
     type: DataTypes.STRING,
     allowNull: true,

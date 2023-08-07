@@ -266,6 +266,7 @@ app.get("/schedule/:match", async (req, res) => {
   }
 });
 
+// 경기장 좌표 가져오기
 app.post("/location/position", async (req, res) => {
   try {
     const { value } = req.body;
@@ -561,6 +562,15 @@ app.post("/record/:match/:quarter", async (req, res) => {
       },
     });
 
+    await Quarters.update(
+      {
+        RECORD: true,
+      },
+      {
+        where: { ID: selectedQuarter.ID },
+      }
+    );
+
     results.map(async (result) => {
       if (result.event === "실점") {
         try {
@@ -651,6 +661,24 @@ app.post("/record/:match/:quarter", async (req, res) => {
     });
   } catch (err) {
     console.error(err);
+    res.status(500).send("에러 발생");
+  }
+});
+
+// 매치별 쿼터 기록 여부 확인하기
+app.get("/record/check/:match", async (req, res) => {
+  const { match } = req.params;
+
+  try {
+    const quarters = await Quarters.findAll({
+      where: {
+        MATCH_ID: match,
+      },
+    });
+
+    res.status(200).send(quarters);
+  } catch (error) {
+    console.error(error);
     res.status(500).send("에러 발생");
   }
 });
