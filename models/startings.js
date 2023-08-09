@@ -12,8 +12,8 @@ const Startings = sequelize.define("Startings", {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
-  PLAYER: {
-    type: DataTypes.STRING,
+  PLAYER_ID: {
+    type: DataTypes.INTEGER,
     allowNull: false,
   },
   POSITION: {

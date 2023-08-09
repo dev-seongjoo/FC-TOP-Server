@@ -455,7 +455,8 @@ app.post("/playerInfo", async (req, res) => {
   }
 });
 
-app.post("/:match/:quarter", async (req, res) => {
+// 선발 명단 저장하기
+app.post("/starting/:match/:quarter", async (req, res) => {
   try {
     const { match, quarter } = req.params;
     const { selectedPlayer, currentFormation } = req.body;
@@ -485,17 +486,24 @@ app.post("/:match/:quarter", async (req, res) => {
         }
       );
 
-      const newStartings = Object.entries(selectedPlayer).map(
-        ([key, value]) => {
+      const newStartings = [];
+      await Promise.all(
+        Object.entries(selectedPlayer).map(async ([key, value]) => {
           const playerName = value[0];
           const position = value[1];
 
-          return {
-            PLAYER: playerName,
+          const player = await Players.findOne({
+            where: {
+              KOR_NM: playerName,
+            },
+          });
+
+          newStartings.push({
+            PLAYER_ID: player.ID,
             POSITION: position,
             QUARTER_ID: selectedQuarter.ID,
-          };
-        }
+          });
+        })
       );
 
       await Startings.destroy({ where: { QUARTER_ID: selectedQuarter.ID } });
@@ -506,8 +514,14 @@ app.post("/:match/:quarter", async (req, res) => {
           const playerName = value[0];
           const position = value[1];
 
+          const player = await Players.findOne({
+            where: {
+              KOR_NM: playerName,
+            },
+          });
+
           await Startings.create({
-            PLAYER: playerName,
+            PLAYER_ID: player.ID,
             POSITION: position,
             QUARTER_ID: createdQuarter.ID,
           });
@@ -540,6 +554,7 @@ app.get("/starting/:match/:quarter", async (req, res) => {
         where: {
           QUARTER_ID: selectedQuarter.ID,
         },
+        include: [{ model: Players, attributes: ["KOR_NM"] }],
       });
       res.status(200).json({ formation, selectedStartings });
     } else {
@@ -574,94 +589,73 @@ app.post("/record/:match/:quarter", async (req, res) => {
       }
     );
 
-    results.map(async (result) => {
-      if (result.event === "실점") {
-        try {
-          const LpPlayer = await Players.findOne({
-            where: {
-              KOR_NM: result.player1,
-            },
-          });
-
-          await Lps.create({
-            QUARTER_ID: selectedQuarter.ID,
-            PLAYER_ID: LpPlayer.ID,
-            LP_TIME: result.time,
-          });
-          res.status(200).send("저장 완료");
-        } catch (err) {
-          console.error(err);
-          res.status(500).send("실점 에러 발생");
-        }
-      }
-
+    for (const result of results) {
       if (result.event === "득점") {
-        try {
-          const scorer = await Players.findOne({
-            where: {
-              KOR_NM: result.player1,
-            },
-          });
-          const goal = await Goals.create({
-            QUARTER_ID: selectedQuarter.ID,
-            PLAYER_ID: scorer.ID,
-            GOAL_TIME: result.time,
-          });
+        const scorer = await Players.findOne({
+          where: {
+            KOR_NM: result.player1,
+          },
+        });
+        const goal = await Goals.create({
+          QUARTER_ID: selectedQuarter.ID,
+          PLAYER_ID: scorer.ID,
+          GOAL_TIME: result.time,
+        });
 
-          if (result.player2 !== "없음") {
-            const assistant = await Players.findOne({
-              where: {
-                KOR_NM: result.player2,
-              },
-            });
-            await Assists.create({
-              GOAL_ID: goal.ID,
-              PLAYER_ID: assistant.ID,
-              ASSIST_TIME: result.time,
-            });
-          }
-          res.status(200).send("저장 완료");
-        } catch (err) {
-          console.error(err);
-          res.status(500).send("에러 발생");
-        }
-      }
-
-      if (result.event === "교체") {
-        try {
-          const subOutPlayer = await Players.findOne({
-            where: {
-              KOR_NM: result.player1,
-            },
-          });
-
-          const subInPlayer = await Players.findOne({
+        if (result.player2 !== "없음") {
+          const assistant = await Players.findOne({
             where: {
               KOR_NM: result.player2,
             },
           });
-
-          await Promise.all([
-            Subs.create({
-              QUARTER_ID: selectedQuarter.ID,
-              PLAYER_ID: subInPlayer.ID,
-              SUB: "IN",
-              SUB_TIME: result.time,
-            }),
-            Subs.create({
-              QUARTER_ID: selectedQuarter.ID,
-              PLAYER_ID: subOutPlayer.ID,
-              SUB: "OUT",
-              SUB_TIME: result.time,
-            }),
-          ]);
-          res.status(200).send("저장 완료");
-        } catch (err) {
-          console.error(err);
-          res.status(500).send("에러 발생");
+          await Assists.create({
+            GOAL_ID: goal.ID,
+            PLAYER_ID: assistant.ID,
+            ASSIST_TIME: result.time,
+          });
         }
+      } else if (result.event === "교체") {
+        const subOutPlayer = await Players.findOne({
+          where: {
+            KOR_NM: result.player1,
+          },
+        });
+
+        const subInPlayer = await Players.findOne({
+          where: {
+            KOR_NM: result.player2,
+          },
+        });
+
+        await Promise.all([
+          Subs.create({
+            QUARTER_ID: selectedQuarter.ID,
+            PLAYER_ID: subInPlayer.ID,
+            SUB: "IN",
+            SUB_TIME: result.time,
+          }),
+          Subs.create({
+            QUARTER_ID: selectedQuarter.ID,
+            PLAYER_ID: subOutPlayer.ID,
+            SUB: "OUT",
+            SUB_TIME: result.time,
+          }),
+        ]);
+      } else if (result.event === "실점") {
+        const LpPlayer = await Players.findOne({
+          where: {
+            KOR_NM: result.player1,
+          },
+        });
+
+        await Lps.create({
+          QUARTER_ID: selectedQuarter.ID,
+          PLAYER_ID: LpPlayer.ID,
+          LP_TIME: result.time,
+        });
       }
-    });
+    }
+    res.status(200).send("저장 완료");
   } catch (err) {
     console.error(err);
     res.status(500).send("에러 발생");
@@ -786,6 +780,54 @@ app.get("/player/:num", async (req, res) => {
     });
 
     res.status(200).send(playerInfo);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("에러 발생");
+  }
+});
+
+app.get("/goalrank", async (req, res) => {
+  try {
+    const results = await Players.findAll({
+      attributes: [
+        "ID",
+        "KOR_NM",
+        "POSITION_FIRST",
+        [sequelize.fn("COUNT", sequelize.col("Goals.PLAYER_ID")), "goal_count"],
+        [
+          sequelize.fn("COUNT", sequelize.col("Startings.PLAYER_ID")),
+          "starting_count",
+        ],
+        [sequelize.fn("COUNT", sequelize.col("Subs.PLAYER_ID")), "sub_count"],
+      ],
+      include: [
+        {
+          model: Goals,
+          attributes: [],
+        },
+        {
+          model: Startings,
+          attributes: [],
+          required: false,
+        },
+        {
+          model: Subs,
+          attributes: [],
+          required: false,
+          where: {
+            SUB: "IN",
+          },
+        },
+      ],
+      group: ["Players.ID"],
+      order: [
+        [sequelize.literal("goal_count"), "DESC"],
+        [sequelize.literal("KOR_NM"), "ASC"],
+      ],
+      limit: 10,
+    });
+
+    res.status(200).send(results);
   } catch (error) {
     console.error(error);
     res.status(500).send("에러 발생");
