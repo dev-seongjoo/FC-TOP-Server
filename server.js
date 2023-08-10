@@ -786,47 +786,142 @@ app.get("/player/:num", async (req, res) => {
   }
 });
 
+// 득점 순위 가져오기
 app.get("/goalrank", async (req, res) => {
+  try {
+    const results = await Goals.findAll({
+      attributes: [
+        "PLAYER_ID",
+        [sequelize.fn("COUNT", sequelize.col("PLAYER_ID")), "goal_count"],
+      ],
+      include: [
+        {
+          model: Players,
+          attributes: ["KOR_NM", "POSITION_FIRST"],
+        },
+      ],
+      group: ["PLAYER_ID"],
+      order: [
+        [sequelize.literal("goal_count"), "DESC"],
+        [sequelize.literal("Player.KOR_NM"), "ASC"],
+      ],
+      limit: 10,
+    });
+    res.status(200).send(results);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("에러 발생");
+  }
+});
+
+// 개인별 득점,도움,실점 정보 가져오기
+app.post("/personalmatchinfo", async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    const goal = await Goals.count({
+      where: { PLAYER_ID: id },
+    });
+
+    const assist = await Assists.count({
+      where: { PLAYER_ID: id },
+    });
+
+    const lp = await Lps.count({
+      where: { PLAYER_ID: id },
+    });
+
+    res.status(200).json({ goal, assist, lp });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "에러 발생" });
+  }
+});
+
+// 모든 선수 출전 횟수 내림차순 정렬
+app.get("/allmatchcount", async (req, res) => {
   try {
     const results = await Players.findAll({
       attributes: [
         "ID",
         "KOR_NM",
         "POSITION_FIRST",
-        [sequelize.fn("COUNT", sequelize.col("Goals.PLAYER_ID")), "goal_count"],
         [
-          sequelize.fn("COUNT", sequelize.col("Startings.PLAYER_ID")),
+          sequelize.literal(`(
+            SELECT COUNT(*)
+            FROM Startings
+            WHERE Startings.PLAYER_ID = Players.ID
+          )`),
           "starting_count",
         ],
-        [sequelize.fn("COUNT", sequelize.col("Subs.PLAYER_ID")), "sub_count"],
+        [
+          sequelize.literal(`(
+            SELECT COUNT(*)
+            FROM Subs
+            WHERE Subs.PLAYER_ID = Players.ID
+              AND Subs.SUB = 'IN'
+          )`),
+          "sub_count",
+        ],
+      ],
+      order: [[sequelize.literal("starting_count + sub_count"), "DESC"]],
+    });
+
+    res.status(200).json(results);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "에러 발생" });
+  }
+});
+
+// 선수별 출전 횟수 가져오기
+app.post("/personalmatchcount", async (req, res) => {
+  const { id } = req.body;
+
+  try {
+    const startingCount = await Startings.count({
+      where: {
+        PLAYER_ID: id,
+      },
+    });
+
+    const subCount = await Subs.count({
+      where: {
+        PLAYER_ID: id,
+        SUB: "IN",
+      },
+    });
+
+    const matchCount = startingCount + subCount;
+
+    res.status(200).json({ matchCount: matchCount });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "에러 발생" });
+  }
+});
+
+// 도움 순위 가져오기
+app.get("/assistrank", async (req, res) => {
+  try {
+    const results = await Assists.findAll({
+      attributes: [
+        "PLAYER_ID",
+        [sequelize.fn("COUNT", sequelize.col("PLAYER_ID")), "assist_count"],
       ],
       include: [
         {
-          model: Goals,
-          attributes: [],
-        },
-        {
-          model: Startings,
-          attributes: [],
-          required: false,
-        },
-        {
-          model: Subs,
-          attributes: [],
-          required: false,
-          where: {
-            SUB: "IN",
-          },
+          model: Players,
+          attributes: ["KOR_NM", "POSITION_FIRST"],
         },
       ],
-      group: ["Players.ID"],
+      group: ["PLAYER_ID"],
       order: [
-        [sequelize.literal("goal_count"), "DESC"],
-        [sequelize.literal("KOR_NM"), "ASC"],
+        [sequelize.literal("assist_count"), "DESC"],
+        [sequelize.literal("Player.KOR_NM"), "ASC"],
       ],
       limit: 10,
     });
-
     res.status(200).send(results);
   } catch (error) {
     console.error(error);
