@@ -284,12 +284,12 @@ app.post("/location/position", async (req, res) => {
 
 app.post("/vote", async (req, res) => {
   try {
-    const { matchId, playerId, attendance } = req.body;
-    console.log(matchId, playerId, attendance);
+    const { match, playerId, attendance } = req.body;
+    console.log(match, playerId, attendance);
 
     const vote = await Votes.findOne({
       where: {
-        MATCH_ID: matchId,
+        MATCH_ID: match,
         PLAYER_ID: playerId,
       },
     });
@@ -299,7 +299,7 @@ app.post("/vote", async (req, res) => {
       await vote.save();
     } else {
       await Votes.create({
-        MATCH_ID: matchId,
+        MATCH_ID: match,
         PLAYER_ID: playerId,
         ATTENDANCE: attendance,
       });
@@ -681,7 +681,7 @@ app.get("/record/check/:match", async (req, res) => {
 });
 
 // 쿼터 정보 가져오기
-app.get("/:match/:quarter", async (req, res) => {
+app.get("schedule/:match/:quarter", async (req, res) => {
   const { match, quarter } = req.params;
 
   try {
@@ -923,6 +923,22 @@ app.get("/assistrank", async (req, res) => {
       limit: 10,
     });
     res.status(200).send(results);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("에러 발생");
+  }
+});
+
+app.get("/locationposition/:match", async (req, res) => {
+  const { match } = req.params;
+  try {
+    const match_location_position = await Matches.findOne({
+      where: {
+        ID: match,
+      },
+      attributes: ["LOCATION_POSITION"],
+    });
+    res.status(200).send(match_location_position);
   } catch (error) {
     console.error(error);
     res.status(500).send("에러 발생");
