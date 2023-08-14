@@ -932,13 +932,29 @@ app.get("/assistrank", async (req, res) => {
 app.get("/locationposition/:match", async (req, res) => {
   const { match } = req.params;
   try {
-    const match_location_position = await Matches.findOne({
+    const matchData = await Matches.findOne({
       where: {
         ID: match,
       },
       attributes: ["LOCATION_POSITION"],
     });
-    res.status(200).send(match_location_position);
+    res.status(200).send(matchData);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("에러 발생");
+  }
+});
+
+app.get("/matchstarttime/:match", async (req, res) => {
+  const { match } = req.params;
+  try {
+    const matchData = await Matches.findOne({
+      where: {
+        ID: match,
+      },
+      attributes: ["DATE", "DURATION", "CHECK_LATE"],
+    });
+    res.status(200).send(matchData);
   } catch (error) {
     console.error(error);
     res.status(500).send("에러 발생");
