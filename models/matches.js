@@ -2,6 +2,7 @@ const sequelize = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
 const Locations = require("./locations");
 const Votes = require("./votes");
+const Attendances = require("./attendances");
 
 const Matches = sequelize.define("Matches", {
   ID: {
@@ -54,6 +55,13 @@ Matches.hasMany(Votes, {
 Votes.belongsTo(Matches, {
   foreignKey: "MATCH_ID",
   onDelete: "CASCADE",
+});
+
+Matches.hasMany(Attendances, {
+  foreignKey: "MATCH_ID",
+});
+Attendances.belongsTo(Matches, {
+  foreignKey: "MATCH_ID",
 });
 
 module.exports = Matches;

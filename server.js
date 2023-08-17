@@ -28,6 +28,7 @@ const Goals = require("./models/goals");
 const Assists = require("./models/assists");
 const Subs = require("./models/subs");
 const Lps = require("./models/lps");
+const Attendances = require("./models/attendances");
 
 app.use(cors());
 app.use(express.json());
@@ -47,6 +48,7 @@ const initialize = async () => {
 // 아이디 중복 확인하기
 app.post("/checkId", async (req, res) => {
   const id = req.body.id;
+  ㅈ;
   try {
     const result = await Players.findOne({
       where: {
@@ -955,6 +957,60 @@ app.get("/matchstarttime/:match", async (req, res) => {
       attributes: ["DATE", "DURATION", "CHECK_LATE"],
     });
     res.status(200).send(matchData);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("에러 발생");
+  }
+});
+
+app.post("/attendance/:match", async (req, res) => {
+  const { match } = req.params;
+  const { player, matchStartTime, checkLate } = req.body;
+
+  try {
+    console.log(matchStartTime, checkLate);
+    const targetTime = new Date(matchStartTime);
+    const currentTime = new Date();
+    const timeDifferenceInMinutes = Math.floor(
+      (targetTime - currentTime) / (1000 * 60)
+    );
+
+    let status;
+    if (timeDifferenceInMinutes < 1) {
+      status = "출석";
+    } else {
+      status = "지각";
+    }
+
+    await Attendances.create({
+      MATCH_ID: match,
+      PLAYER_ID: player,
+      ATTENDANCE_TIME: currentTime,
+      ATTENDANCE_STATUS: status,
+    });
+
+    res.status(200).send(status);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("에러 발생");
+  }
+});
+
+app.get("/attendance/:match/:player", async (req, res) => {
+  const { match, player } = req.params;
+  console.log(match, player);
+  try {
+    const result = await Attendances.findOne({
+      where: {
+        MATCH_ID: match,
+        PLAYER_ID: player,
+      },
+    });
+    if (result) {
+      res.status(200).send(result);
+    } else {
+      res.status(404).send("출석 정보를 찾을 수 없습니다.");
+    }
   } catch (error) {
     console.error(error);
     res.status(500).send("에러 발생");

@@ -6,6 +6,7 @@ const Assists = require("./assists");
 const Subs = require("./subs");
 const Lps = require("./lps");
 const Startings = require("./startings");
+const Attendances = require("./attendances");
 
 const Players = sequelize.define("Players", {
   ID: {
@@ -108,6 +109,13 @@ Players.hasMany(Lps, {
   foreignKey: "PLAYER_ID",
 });
 Lps.belongsTo(Players, {
+  foreignKey: "PLAYER_ID",
+});
+
+Players.hasMany(Attendances, {
+  foreignKey: "PLAYER_ID",
+});
+Attendances.belongsTo(Players, {
   foreignKey: "PLAYER_ID",
 });
 

@@ -1,7 +1,7 @@
 const sequelize = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
 
-const Goals = sequelize.define("Goals", {
+const Attendances = sequelize.define("Attendances", {
   ID: {
     type: DataTypes.INTEGER,
     allowNull: false,
@@ -16,18 +16,14 @@ const Goals = sequelize.define("Goals", {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
-  ATTENDANCE_LIMIT: {
+  ATTENDANCE_TIME: {
     type: DataTypes.DATE,
     allowNull: false,
   },
-  ATTENDANCE_TIME: {
-    type: DataTypes.DATE,
-    allowNull: true,
-  },
   ATTENDANCE_STATUS: {
-    type: DataTypes.STRING,
-    allowNull: true,
+    type: DataTypes.ENUM("출석", "지각", "결석"),
+    allowNull: false,
   },
 });
 
-module.exports = Goals;
+module.exports = Attendances;
