@@ -48,7 +48,7 @@ const initialize = async () => {
 // 아이디 중복 확인하기
 app.post("/checkId", async (req, res) => {
   const id = req.body.id;
-  ㅈ;
+
   try {
     const result = await Players.findOne({
       where: {
@@ -129,8 +129,6 @@ app.post("/login", async (req, res) => {
     const { id, password } = req.body;
     const player = await Players.findOne({ where: { LOGIN_ID: id } });
 
-    console.log(player);
-
     if (!player) {
       res.status(400).send("아이디 혹은 비밀번호가 잘못되었습니다.");
       return;
@@ -141,19 +139,18 @@ app.post("/login", async (req, res) => {
     // if (!result) {
     //   return res.status(400).send("아이디 혹은 비밀번호가 잘못되었습니다.");
     // }
+
     const accessToken = jwt.sign(
       { id: player.LOGIN_ID },
       process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: "1m" }
+      { expiresIn: "1h" }
     );
     const refreshToken = jwt.sign(
       { id: player.LOGIN_ID },
       process.env.REFRESH_TOKEN_SECRET,
-      { expiresIn: "7d" } // refreshToken의 만료시간을 7일로 설정
+      { expiresIn: "7d" }
     );
-    await saveRefreshToken(player.LOGIN_ID, refreshToken); // refreshToken을 DB에 저장
-
-    console.log(player);
+    await saveRefreshToken(refreshToken);
 
     return res.status(200).json({ accessToken, refreshToken, player });
   } catch (err) {
@@ -683,7 +680,7 @@ app.get("/record/check/:match", async (req, res) => {
 });
 
 // 쿼터 정보 가져오기
-app.get("schedule/:match/:quarter", async (req, res) => {
+app.get("/schedule/:match/:quarter", async (req, res) => {
   const { match, quarter } = req.params;
 
   try {
@@ -701,7 +698,7 @@ app.get("schedule/:match/:quarter", async (req, res) => {
 });
 
 // 쿼터 득점 정보 가져오기
-app.get("/goal/:match/:quarter", async (req, res) => {
+app.get("/data/:match/:quarter", async (req, res) => {
   const { match, quarter } = req.params;
 
   try {

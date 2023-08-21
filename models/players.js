@@ -64,9 +64,13 @@ const Players = sequelize.define("Players", {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  ROLE: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   REFRESH_TOKEN: {
     type: DataTypes.STRING,
-    allowNull: true, // refreshToken은 사용자가 로그인 하지 않았을 때 null이 될 수 있습니다.
+    allowNull: true,
   },
 });
 
